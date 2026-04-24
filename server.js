@@ -11,39 +11,34 @@ const INSTANCE_ID = "F2203E24F1091863F1F62A6D661BA0A";
 const TOKEN = "4A20206FA05E57A6E615C537";
 const CLIENT_TOKEN = "F795495fcc59e4524970d1636b4d0b845S";
 
-// memória de usuários
+// memória simples
 const usuarios = {};
 
-// enviar mensagem
 async function enviarMensagem(phone, message) {
   await axios.post(
     `https://api.z-api.io/instances/${INSTANCE_ID}/token/${TOKEN}/send-text`,
     { phone, message },
     {
-      headers: { "Client-Token": CLIENT_TOKEN }
+      headers: {
+        "Client-Token": CLIENT_TOKEN
+      }
     }
   );
 }
 
-// menu bonito
 function menu() {
-  return `👋 *Info & Clima ❄️*
+  return `👋 *Info & Clima*
 
-Atendimento especializado em ar-condicionado.
+Como podemos te ajudar? ❄️
 
-Como podemos te ajudar hoje?
+1️⃣ Instalação
+2️⃣ Manutenção
+3️⃣ Limpeza
+4️⃣ Orçamento
 
-━━━━━━━━━━━━━━━
-1️⃣ Instalação  
-2️⃣ Manutenção  
-3️⃣ Limpeza  
-4️⃣ Orçamento  
-━━━━━━━━━━━━━━━
-
-Digite o número da opção 👇`;
+Digite o número 👇`;
 }
 
-// webhook
 app.post("/webhook", async (req, res) => {
   try {
     const phone = req.body.phone;
@@ -52,150 +47,70 @@ app.post("/webhook", async (req, res) => {
     if (!phone) return res.sendStatus(200);
 
     if (!usuarios[phone]) {
-      usuarios[phone] = { etapa: "menu", dados: {} };
+      usuarios[phone] = { etapa: "inicio" };
     }
 
     const user = usuarios[phone];
     let resposta = "";
 
-    // MENU
     if (mensagem.includes("oi") || mensagem.includes("olá") || mensagem === "menu") {
       user.etapa = "menu";
       resposta = menu();
     }
 
-    // INSTALAÇÃO
     else if (mensagem === "1" || mensagem.includes("instala")) {
-      user.etapa = "inst_bairro";
-      resposta = `🔧 *Instalação de Ar*
+      user.etapa = "instalacao";
+      resposta = `🔧 *Instalação*
 
-💰 Valor: *R$700* (até 3 metros)
+💰 R$700 (até 3 metros)
 
-Para continuar, me informe seu *bairro* 📍`;
+Me envie:
+📍 Bairro
+🏠 Casa ou apartamento
+❄️ BTUs`;
     }
 
-    else if (user.etapa === "inst_bairro") {
-      user.dados.bairro = mensagem;
-      user.etapa = "inst_tipo";
-      resposta = "🏠 É casa ou apartamento?";
-    }
-
-    else if (user.etapa === "inst_tipo") {
-      user.dados.tipo = mensagem;
-      user.etapa = "inst_btus";
-      resposta = "❄️ Qual a potência do ar (BTUs)?";
-    }
-
-    else if (user.etapa === "inst_btus") {
-      user.dados.btus = mensagem;
-      user.etapa = "confirmar";
-
-      resposta = `✅ *Resumo do pedido*
-
-📍 Bairro: ${user.dados.bairro}
-🏠 Tipo: ${user.dados.tipo}
-❄️ BTUs: ${user.dados.btus}
-
-Confirmar atendimento?
-
-1️⃣ Sim  
-2️⃣ Não`;
-    }
-
-    // LIMPEZA
-    else if (mensagem === "3" || mensagem.includes("limpeza")) {
-      user.etapa = "limp_bairro";
-      resposta = `🧼 *Limpeza de Ar*
-
-💰 Valor: *R$400*
-
-📍 Qual seu bairro?`;
-    }
-
-    else if (user.etapa === "limp_bairro") {
-      user.dados.bairro = mensagem;
-      user.etapa = "limp_dia";
-      resposta = "📆 Qual dia deseja o serviço?";
-    }
-
-    else if (user.etapa === "limp_dia") {
-      user.dados.dia = mensagem;
-      user.etapa = "confirmar";
-
-      resposta = `✅ *Resumo do pedido*
-
-📍 Bairro: ${user.dados.bairro}
-📆 Dia: ${user.dados.dia}
-
-Confirmar?
-
-1️⃣ Sim  
-2️⃣ Não`;
-    }
-
-    // MANUTENÇÃO
     else if (mensagem === "2" || mensagem.includes("manutenção")) {
-      user.etapa = "man_desc";
+      user.etapa = "manutencao";
       resposta = `🛠️ *Manutenção*
 
-Descreva o problema 👇  
-(ex: não gela, vazando água)`;
+Descreva o problema:
+(ex: não gela, vazando)
+
+📍 Informe seu bairro`;
     }
 
-    else if (user.etapa === "man_desc") {
-      user.dados.problema = mensagem;
-      user.etapa = "man_bairro";
-      resposta = "📍 Qual seu bairro?";
+    else if (mensagem === "3" || mensagem.includes("limpeza")) {
+      user.etapa = "limpeza";
+      resposta = `🧼 *Limpeza*
+
+💰 R$400
+
+📍 Bairro
+📆 Dia desejado`;
     }
 
-    else if (user.etapa === "man_bairro") {
-      user.dados.bairro = mensagem;
-      user.etapa = "confirmar";
-
-      resposta = `✅ *Resumo do pedido*
-
-📍 Bairro: ${user.dados.bairro}
-⚠️ Problema: ${user.dados.problema}
-
-Confirmar?
-
-1️⃣ Sim  
-2️⃣ Não`;
-    }
-
-    // CONFIRMAÇÃO
-    else if (user.etapa === "confirmar" && mensagem === "1") {
-      resposta = `🎉 *Pedido confirmado!*
-
-👨‍🔧 Um técnico irá entrar em contato em breve.
-
-Obrigado por escolher a *Info & Clima* ❄️`;
-      user.etapa = "final";
-    }
-
-    else if (user.etapa === "confirmar" && mensagem === "2") {
-      user.etapa = "menu";
-      user.dados = {};
-      resposta = "Tudo bem 👍 vamos começar novamente.\n\n" + menu();
-    }
-
-    // ORÇAMENTO
-    else if (mensagem === "4" || mensagem.includes("orçamento")) {
+    else if (mensagem === "4" || mensagem.includes("orçamento") || mensagem.includes("orcamento")) {
+      user.etapa = "orcamento";
       resposta = `📋 *Orçamento*
 
 Envie:
 
 📍 Bairro  
 ❄️ BTUs  
-🏠 Tipo (casa/apto)  
-📸 Fotos do local
-
-👨‍🔧 Vamos analisar e te responder rápido!`;
+🏠 Casa/apto  
+📏 Distância`;
     }
 
-    // fallback
+    else if (user.etapa !== "inicio") {
+      resposta = `Perfeito 👍
+
+👨‍🔧 Um atendente vai continuar com você em breve.`;
+      user.etapa = "final";
+    }
+
     else {
-      resposta = "Não entendi 🤔\nDigite *menu* para ver as opções.";
+      resposta = "Digite *menu* para ver as opções.";
     }
 
     await enviarMensagem(phone, resposta);
