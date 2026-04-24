@@ -164,23 +164,24 @@ Confirmar?
     }
 
     // CONFIRMAÇÃO
-    else if (user.etapa === "confirmar" && (mensagem === "1" || mensagem.includes("sim"))) {
+    else if (user.etapa === "confirmar" && mensagem === "1") {
       resposta = `🎉 *Pedido confirmado!*
 
 👨‍🔧 Um técnico irá entrar em contato em breve.
 
 Obrigado por escolher a *Info & Clima* ❄️`;
-      
-      // RESETAR O USUÁRIO APÓS FINALIZAR
-      user.etapa = "menu"; 
-      user.dados = {}; 
+      user.etapa = "final";
     }
 
-    else if (user.etapa === "confirmar" && (mensagem === "2" || mensagem.includes("não"))) {
+    else if (user.etapa === "confirmar" && mensagem === "2") {
       user.etapa = "menu";
       user.dados = {};
       resposta = "Tudo bem 👍 vamos começar novamente.\n\n" + menu();
     }
+
+    // ORÇAMENTO
+    else if (mensagem === "4" || mensagem.includes("orçamento")) {
+      resposta = `📋 *Orçamento*
 
 Envie:
 
