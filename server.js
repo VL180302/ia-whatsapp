@@ -13,7 +13,7 @@ const TOKEN = "4A20206FA05E57A6E615C537";
 const CLIENT_TOKEN = "F795495fcc59e4524970d1636b4d0b845S";
 
 // 📞 SEU NÚMERO (com DDI)
-const ADMIN = "55SEUNUMERO";
+const ADMIN = "5524988372144";
 
 // banco simples (arquivo)
 const DB_FILE = "clientes.json";
