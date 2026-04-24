@@ -6,58 +6,118 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 8080;
 
-// 🔐 COLOQUE SEUS DADOS AQUI
-const INSTANCE_ID = "3F2203E24F1091863F1F62A6D661BA0A";
+// Z-API
+const INSTANCE_ID = "F2203E24F1091863F1F62A6D661BA0A";
 const TOKEN = "4A20206FA05E57A6E615C537";
 const CLIENT_TOKEN = "F795495fcc59e4524970d1636b4d0b845S";
 
-app.post("/webhook", async (req, res) => {
-  try {
-    console.log("Mensagem recebida:");
+// memória simples
+const usuarios = {};
 
-    const mensagem = req.body.text?.message;
-    const telefone = req.body.phone;
+async function enviarMensagem(phone, message) {
+  await axios.post(
+    `https://api.z-api.io/instances/${INSTANCE_ID}/token/${TOKEN}/send-text`,
+    { phone, message },
+    {
+      headers: {
+        "Client-Token": CLIENT_TOKEN
+      }
+    }
+  );
+}
 
-    if (!mensagem) return res.sendStatus(200);
+function menu() {
+  return `👋 *Info & Clima*
 
-    let resposta = "";
+Como podemos te ajudar? ❄️
 
-    if (mensagem.toLowerCase() === "oi") {
-      resposta = `Olá! 👋
-
-Escolha uma opção:
 1️⃣ Instalação
 2️⃣ Manutenção
-3️⃣ Limpeza`;
-    } else if (mensagem === "1") {
-      resposta = "Instalação: R$700 (até 3 metros de tubulação)";
-    } else if (mensagem === "2") {
-      resposta = "Manutenção: consulte valores";
-    } else if (mensagem === "3") {
-      resposta = "Limpeza: R$400";
+3️⃣ Limpeza
+4️⃣ Orçamento
+
+Digite o número 👇`;
+}
+
+app.post("/webhook", async (req, res) => {
+  try {
+    const phone = req.body.phone;
+    const mensagem = (req.body.text?.message || "").toLowerCase();
+
+    if (!phone) return res.sendStatus(200);
+
+    if (!usuarios[phone]) {
+      usuarios[phone] = { etapa: "inicio" };
     }
 
-    if (resposta) {
-      await axios.post(
-        `https://api.z-api.io/instances/${INSTANCE_ID}/token/${TOKEN}/send-text`,
-        {
-          phone: telefone,
-          message: resposta
-        },
-        {
-          headers: {
-            "Client-Token": CLIENT_TOKEN
-          }
-        }
-      );
+    const user = usuarios[phone];
+    let resposta = "";
 
-      console.log("Resposta enviada ✅");
+    if (mensagem.includes("oi") || mensagem.includes("olá") || mensagem === "menu") {
+      user.etapa = "menu";
+      resposta = menu();
     }
 
+    else if (mensagem === "1" || mensagem.includes("instala")) {
+      user.etapa = "instalacao";
+      resposta = `🔧 *Instalação*
+
+💰 R$700 (até 3 metros)
+
+Me envie:
+📍 Bairro
+🏠 Casa ou apartamento
+❄️ BTUs`;
+    }
+
+    else if (mensagem === "2" || mensagem.includes("manutenção")) {
+      user.etapa = "manutencao";
+      resposta = `🛠️ *Manutenção*
+
+Descreva o problema:
+(ex: não gela, vazando)
+
+📍 Informe seu bairro`;
+    }
+
+    else if (mensagem === "3" || mensagem.includes("limpeza")) {
+      user.etapa = "limpeza";
+      resposta = `🧼 *Limpeza*
+
+💰 R$400
+
+📍 Bairro
+📆 Dia desejado`;
+    }
+
+    else if (mensagem === "4" || mensagem.includes("orçamento") || mensagem.includes("orcamento")) {
+      user.etapa = "orcamento";
+      resposta = `📋 *Orçamento*
+
+Envie:
+
+📍 Bairro  
+❄️ BTUs  
+🏠 Casa/apto  
+📏 Distância`;
+    }
+
+    else if (user.etapa !== "inicio") {
+      resposta = `Perfeito 👍
+
+👨‍🔧 Um atendente vai continuar com você em breve.`;
+      user.etapa = "final";
+    }
+
+    else {
+      resposta = "Digite *menu* para ver as opções.";
+    }
+
+    await enviarMensagem(phone, resposta);
     res.sendStatus(200);
 
-  } catch (error) {
-    console.log("Erro:", error.response?.data || error.message);
+  } catch (err) {
+    console.log(err.message);
     res.sendStatus(500);
   }
 });
